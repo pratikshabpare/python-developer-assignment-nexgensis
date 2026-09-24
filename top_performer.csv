@@ -1,4 +1,5 @@
 agent_id,packages_delivered,total_distance,efficiency,is_best_agent
-A3,1,14.14,14.14,YES
-A2,2,79.21,39.6,NO
-A1,2,121.21,60.61,NO
+A4,6,77.55,12.93,YES
+A2,2,38.1,19.05,NO
+A3,3,151.89,50.63,NO
+A1,0,0.0,0.0,NO

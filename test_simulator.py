@@ -118,6 +118,53 @@ class TestFastBoxSimulator(unittest.TestCase):
         if os.path.exists("temp_report.json"):
             os.remove("temp_report.json")
 
+    def test_edge_cases_and_tie_breaking(self):
+        # 1. Equidistant agents tie-breaking: A1 and A2 at same distance to W1
+        wh = {"W1": [0.0, 0.0]}
+        ag = {"A2": [5.0, 0.0], "A1": [0.0, 5.0]} # Both distance 5.0
+        pkgs = [{"id": "P1", "warehouse": "W1", "destination": [0.0, 10.0]}]
+
+        assignments = assign_packages_to_nearest_agents(wh, ag, pkgs)
+        # Ties must break alphabetically to A1
+        self.assertEqual(len(assignments["A1"]), 1)
+        self.assertEqual(len(assignments["A2"]), 0)
+
+        sim = simulate_delivery_operations(wh, ag, assignments)
+        report = generate_report(sim)
+
+        self.assertEqual(report["best_agent"], "A1")
+        self.assertEqual(report["A2"]["packages_delivered"], 0)
+        self.assertEqual(report["A2"]["total_distance"], 0.0)
+        self.assertEqual(report["A2"]["efficiency"], 0.0)
+
+    def test_route_optimization(self):
+        # Test that route optimization handles reordering
+        wh = {"W1": [0.0, 0.0]}
+        ag = {"A1": [0.0, 0.0]}
+        pkgs = [
+            {"id": "P1", "warehouse": "W1", "destination": [50.0, 0.0]},
+            {"id": "P2", "warehouse": "W1", "destination": [5.0, 0.0]}
+        ]
+        assignments = assign_packages_to_nearest_agents(wh, ag, pkgs)
+        # Default order (P1 then P2):
+        # (0,0) -> W1(0,0): 0
+        # W1 -> P1(50,0): 50
+        # P1(50,0) -> W1(0,0): 50
+        # W1 -> P2(5,0): 5
+        # Total = 105
+        sim_default = simulate_delivery_operations(wh, ag, assignments, optimize_route=False)
+        self.assertEqual(sim_default["A1"]["total_distance"], 105.0)
+
+        # Optimized order (P2 then P1):
+        # (0,0) -> W1(0,0): 0
+        # W1 -> P2(5,0): 5
+        # P2(5,0) -> W1(0,0): 5
+        # W1 -> P1(50,0): 50
+        # Total = 60
+        sim_opt = simulate_delivery_operations(wh, ag, assignments, optimize_route=True)
+        self.assertEqual(sim_opt["A1"]["total_distance"], 60.0)
+        self.assertLess(sim_opt["A1"]["total_distance"], sim_default["A1"]["total_distance"])
+
 
 if __name__ == "__main__":
     unittest.main()
